@@ -76,8 +76,42 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
         1. joint_orientations的四元数顺序为(x, y, z, w)
         2. from_euler时注意使用大写的XYZ
     """
-    joint_positions = None
-    joint_orientations = None
+    joint_positions = np.zeros(shape=(len(joint_offset), 3))
+    joint_orientations = np.zeros(shape=(len(joint_offset), 4))
+    single_frame_motion_data = motion_data[frame_id]
+    end_cnt = 0 # 用于计算normal joint的rotation，因为end没有rotation
+    # q_result = q_parent * q_offset * conj(q_parent) 
+    # [0]  = q[0]q*
+    # [p']    [p]
+    # conj: 共轭
+    for idx, offset in enumerate(joint_offset):
+        cur_joint_name = joint_name[idx]
+        parent_idx = joint_parent[idx]
+
+        if cur_joint_name.startswith('RootJoint'):
+            # Root joint, don't need change
+            joint_positions[idx] = single_frame_motion_data[:3]
+            joint_orientations[idx] = R.from_euler('XYZ', single_frame_motion_data[3:6], degrees=True).as_quat()
+        elif cur_joint_name.endswith('_end'):
+            # End effector, just need position
+            # 用四元数计算发现结果有问题
+            # q_result = joint_orientations[parent_idx] * np.concatenate(([0], offset)) * np.conj(joint_orientations[parent_idx])
+            # joint_positions[idx] = joint_positions[parent_idx] + q_result[1:]
+            rot_parent = R.from_quat(joint_orientations[parent_idx]).as_matrix()
+            joint_positions[idx] = joint_positions[parent_idx] + np.dot(rot_parent, offset)
+            end_cnt += 1
+        else:
+            # normal joint, both position and orientation are needed
+            # 自己的旋转
+            rotation = R.from_euler('XYZ', single_frame_motion_data[3*(idx-end_cnt+1):3*(idx-end_cnt+2)], degrees=True).as_matrix()
+            rot_parent = R.from_quat(joint_orientations[parent_idx]).as_matrix()
+            # R_child_global = R_parent_global dot R_child_local
+            orientation = np.dot(rot_parent, rotation)
+            joint_orientations[idx] = R.from_matrix(orientation).as_quat()
+            # P_child_global = P_parent_global + R_parent_global dot offset
+            joint_positions[idx] = joint_positions[parent_idx] + np.dot(rot_parent, offset)
+    
+    
     return joint_positions, joint_orientations
 
 
