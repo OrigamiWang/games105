@@ -40,7 +40,6 @@ class MetaData:
         while path1 and path2 and path2[-1] == path1[-1]:
             path1.pop()
             a = path2.pop()
-            
         path2.append(a)
         path = path2 + list(reversed(path1))
         path_name = [self.joint_name[i] for i in path]
@@ -168,7 +167,7 @@ def main():
     viewer = SimpleViewer()
     
     # part1
-    # part1_simple(viewer, np.array([0.5, 0.75, 0.5]))
+    part1_simple(viewer, np.array([0.5, 0.75, 0.5]))
     # part1_hard(viewer, np.array([0.5, 0.5, 0.5]))
     # part1_animation(viewer, np.array([0.5, 0.5, 0.5]))
     
